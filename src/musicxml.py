@@ -26,7 +26,7 @@ TODO:
 import xml.etree.cElementTree as ET
 
 
-filename = 'Pueri_Hebraeorum.mscx'
+filename = '../resources/Pueri_Hebraeorum.mscx'
 part_names = []
 pitch_names = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B']
 xml_durations = {'breve': 32, 'whole': 16, 'half': 8, 'quarter': 4, 'eighth': 2, '16th': 1}
