@@ -1,0 +1,13 @@
+
+INPUT MODULES
+
+- capable of reading from ONE specific musical format
+- possible formats: lilypond, mei, musicxml, maybe midi?
+- creates an array of values (list, list of tuples?) describing the essential score information (pitches, durations)
+-- this intermediate format needs to be specified.
+
+OUTPUT MODULE
+
+- takes the intermediate data and outputs a stream of characters, each one representing a type of the font
+
+
