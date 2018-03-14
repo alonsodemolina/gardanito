@@ -34,8 +34,37 @@ def extraer(texto, string):
     resto=texto[:string_start+1] + texto[i:]
     return (bloque, resto)
 
+def tokenizar(bloque):
+    l=[]
+    i=13
+    hay_caracteres=1
+    while hay_caracteres:
+        i=i+1
+        c=bloque[i]
+        if c=='}':
+            hay_caracteres=0
+        if c==' ' or c=='\t' or c=='\n':
+            continue
+        if c=='\\':
+            i=i+1
+            if bloque[i].isalpha():
+                palabra=""
+                letra=bloque[i]
+                while letra.isalpha():
+                    palabra=palabra + letra
+                    i=i+1
+                    letra=bloque[i]
+                l.append('\\' + palabra)
+            else:
+                l.append('\\' + bloque[i])
+            continue 
+        l.append(c)
+    return l
+
 
 lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 texto=quitar_comments(lilyfile.read())
 (cantus, texto)=extraer(texto, "cantus")
-print cantus
+
+tokens=tokenizar(cantus)
+print tokens
