@@ -78,6 +78,8 @@ Think about a more meaningful notation.
 
 * If a word continues to the next syllable that is indicated by a - (hyphen) at the end of the first syllable.
 
+* To indicate repetition of text (ij) we use brackets: `"Ky- ri- e, [Ky- ri- e]"`
+
 * Abbreviations and ligatures in the text can be calculated later.
 
 
