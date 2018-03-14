@@ -72,7 +72,7 @@ for linea in tabla.readlines():
 print stream
 
 for item in stream:
-    sys.stdout.write(glyph[item.rstrip()])
+    sys.stdout.write(glyph[item])
 
 print
 
