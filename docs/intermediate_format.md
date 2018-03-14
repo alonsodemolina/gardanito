@@ -1,8 +1,11 @@
-#A proposal for an output intermediate format common to all modules
+# Intermediate format
+A proposal for an output intermediate format common to all modules.
+
+The intermediate format consists of a list of strings which encodes the music
+and optionally a single string which encodes the lyrics.
 
 
 ## Example
-
 This example is the beginning of "O quam gloriosum est"
 
 ```python
@@ -15,50 +18,53 @@ This example is the beginning of "O quam gloriosum est"
 
 
 ## Music
-
-List of strings.
+The music is encoded as a list of strings.
 Each string is one or more words separated by a single space.
 
-#### Normal notes
-'duration NOTEoctave'
+**Normal notes:** 
+`'duration NOTEoctave'`
 
-duration is one of maxima, longa, brevis, semibrevis, minima, semiminima, fusa, semifusa
+* _duration_ is one of `maxima`, `longa`, `brevis`, `semibrevis`, `minima`, `semiminima`, `fusa`, `semifusa`
 
-NOTE is one of C, C#, D, Eb, E, F, F#, G, G#, A, Bb
+* _NOTE_ is one of C, C#, D, Eb, E, F, F#, G, G#, A, Bb
 
-octave is an integer. C3 is central do
+* _octave_ is an integer. C3 is central do
 
-#### Dotted notes
-'dotted duration NOTEoctave'
+**Dotted notes:** 
+`'dotted duration NOTEoctave'`
 
-#### Colored notes
-'colored duration NOTEoctave'
+**Colored notes:** 
+`'colored duration NOTEoctave'`
 
-#### Rests
-'duration rest'
+_duration_ is the notated duration
 
-#### Ligatures
-'ligature n'
+**Rests:** 
+`'duration rest'`
 
-n is the number of following notes that are part of the ligature
+**Ligatures:** 
+`'ligature n'`
 
-#### Key signature
-'-1' for one flat, '0' for nothing
+_n_ is the number of following notes that are part of the ligature
 
-#### Clef
-'(c|f|g)n'
+**Key signature:** 
+`'-1'` for one flat, `'0'` for nothing
 
-n is the line. 1 is the bottom line
+**Clef:** 
+`'signn'`
 
-#### Time signature
+_sign_ is one of f, c, g
+
+_n_ is the line. 1 is the bottom line
+
+**Time signature:** 
 Think about it
 
 
 ## Lyrics
 
-A single string with syllables separated by a single space
+* A single string with syllables separated by a single space.
 
-* A syllable for each note or ligature
+* A syllable for each note or ligature.
 
 * Melismas are indicated with the syllabe _ (underscore).
 
@@ -69,7 +75,7 @@ A single string with syllables separated by a single space
 
 * A list of strings makes it very human readable.
 
-* The three first elements of the list have a special meaning: name, original clef and key signature. Perhaps that information should be included in a different structure as a "header". The time signature can change in between the piece, so it should not be part of that "header".
+* The three first elements of the list have a special meaning: name, original clef and key signature. Perhaps that information should be included in a different structure as a "header". The time signature can change in the middle of the piece, so it should not be part of that "header".
 
 * 'time 2/2' should be substituted by a more meaningful notation.
 
