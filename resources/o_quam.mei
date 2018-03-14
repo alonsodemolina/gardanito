@@ -1,0 +1,54 @@
+<mei>
+<meiHead>
+</meiHead>
+<music>
+<body>
+<mdiv>
+<score>
+	<scoreDef prolatio="2">
+		<staffGrp n="1">
+			<staffDef clef.line="1" clef.shape="C" label="Cantus" lines="5" n="1"/>
+		</staffGrp>
+	</scoreDef>
+	<section>
+		<staff n="1">
+			<layer n="1">
+				<ligature form="recta">
+					<note pname="g" oct="4" dur="longa"></note>
+					<note pname="a" oct="4" dur="brevis"></note>
+				</ligature>
+				<note pname="a" oct="4" dur="semibrevis"></note>
+				<note pname="a" oct="4" dur="minima"></note>
+				<note pname="a" oct="4" dur="minima"></note>
+				<note pname="a" oct="4" dur="minima" dots="1"></note>
+				<note pname="b" oct="4" dur="semiminima"></note>
+				<ligature form="recta">
+					<note pname="c" oct="5" dur="semibrevis"></note>
+					<note pname="d" oct="5" dur="semibrevis" dots="1"></note>
+				</ligature>
+				<note pname="d" oct="5" dur="minima"></note>
+				<note pname="g" oct="4" dur="minima"></note>
+				<note pname="c" oct="5" dur="minima" dots="1"></note>
+				<note pname="b" oct="4" dur="semiminima"></note>
+				<note pname="a" oct="4" dur="semiminima"></note>
+				<note pname="g" oct="4" dur="semiminima"></note>
+				<note pname="a" oct="4" dur="minima"></note>
+				<note pname="g" oct="4" dur="semibrevis"></note>
+				<note pname="f" oct="4" dur="minima" accid="s"></note>
+				<note pname="g" oct="4" dur="semibrevis"></note>
+				<note pname="g" oct="4" dur="brevis"></note>
+				<rest dur="semibrevis"></rest>
+				<rest dur="minima"></rest>
+				<note pname="c" oct="4" dur="minima">
+					<verse>
+						<syl>in</syl>
+					</verse>
+				</note>
+			</layer>
+		</staff>
+	</section>
+</score>
+</mdiv>
+</body>
+</music>
+</mei>
