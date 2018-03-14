@@ -47,7 +47,7 @@ Think about a more meaningful notation.
 
 * _NOTE_ is one of C, C#, D, Eb, E, F, F#, G, G#, A, Bb, B
 
-* _octave_ is an integer. C3 is central do
+* _octave_ is an integer. C3 is central do. ¿No debería ser C4?
 
 **Dotted notes:** 
 `'dotted duration NOTEoctave'`
