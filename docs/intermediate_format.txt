@@ -1,0 +1,29 @@
+A proposal for an output intermediate format common to all modules
+
+The example is the beginning of "O quam gloriosum est"
+
+['Cantus', 'c1' '0', 'time 2/2', 'ligature 2', 'longa G3', 'brevis A3', 'semibrevis A3', 'minima A3', 'minima A3', 'dotted minima A3', 'semiminima B3', 'ligature 2', 'brevis C4', 'dotted brevis D4', 'minima D4', 'minima G3', 'dotted minima C4', 'semiminima B3', 'semiminima A3', 'semiminima G3', 'minima A3', 'semibrevis G3', 'minima F#3', 'semibrevis G3', 'brevis G3', 'semibrevis rest', 'minima rest', 'minima C3']
+
+"O quam glo- ri- o- _ _ sum est re- _ _ _ _ _ _ _ gnum in"
+
+
+
+A list of strings makes it very human readable.
+
+The three first elements of the list have a special meaning: name, original clef and key signature. Perhaps that information should be included in a different structure as a "header". The time signature can change in between the piece, so it should not be part of that "header".
+
+'time 2/2' should be substituted by a more meaningful notation.
+
+'ligature n' means that the following n notes are part of a ligature.
+
+Sharp #, Flat b.
+
+The rests can be grouped in any way. The exact distribution of rests is calculated later.
+
+The text is encoded as a separated string.
+
+There is a syllabe for each note or ligature.
+
+Melismas are indicated with the syllabe '_' (underscore).
+
+Abreviations and ligatures in the text can be calculated later.
