@@ -55,6 +55,7 @@ def tokenizar(bloque):
                     i=i+1
                     letra=bloque[i]
                 l.append('\\' + palabra)
+                i=i-1
             else:
                 l.append('\\' + bloque[i])
             continue 
