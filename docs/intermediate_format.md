@@ -20,13 +20,32 @@ This example is the beginning of "O quam gloriosum est"
 ## Music
 The music is encoded as a list of strings.
 Each string is one or more words separated by a single space.
+A list of strings makes it very human readable.
+
+The three first elements of the list have a special meaning: label, original clef and key signature. Perhaps that information should be included in a different structure as a "header". The time signature can change in the middle of the piece, so it should not be part of that "header".
+
+**Label:** 
+Any string
+
+**Clef:** 
+`'signn'`
+
+* _sign_ is one of f, c, g
+
+* _n_ is the line. 1 is the bottom line
+
+**Key signature:** 
+`'-1'` for one flat, `'0'` for nothing
+
+**Time signature:** 
+Think about a more meaningful notation.
 
 **Normal notes:** 
 `'duration NOTEoctave'`
 
 * _duration_ is one of `maxima`, `longa`, `brevis`, `semibrevis`, `minima`, `semiminima`, `fusa`, `semifusa`
 
-* _NOTE_ is one of C, C#, D, Eb, E, F, F#, G, G#, A, Bb
+* _NOTE_ is one of C, C#, D, Eb, E, F, F#, G, G#, A, Bb, B
 
 * _octave_ is an integer. C3 is central do
 
@@ -36,28 +55,17 @@ Each string is one or more words separated by a single space.
 **Colored notes:** 
 `'colored duration NOTEoctave'`
 
-_duration_ is the notated duration
+* _duration_ is the notated duration
 
 **Rests:** 
 `'duration rest'`
 
+* The rests can be grouped in any way. The exact distribution of rests is calculated later.
+
 **Ligatures:** 
 `'ligature n'`
 
-_n_ is the number of following notes that are part of the ligature
-
-**Key signature:** 
-`'-1'` for one flat, `'0'` for nothing
-
-**Clef:** 
-`'signn'`
-
-_sign_ is one of f, c, g
-
-_n_ is the line. 1 is the bottom line
-
-**Time signature:** 
-Think about it
+* _n_ is the number of following notes that are part of the ligature
 
 
 ## Lyrics
@@ -66,20 +74,12 @@ Think about it
 
 * A syllable for each note or ligature.
 
-* Melismas are indicated with the syllabe _ (underscore).
+* Melismas are indicated with the syllable _ (underscore).
 
 * If a word continues to the next syllable that is indicated by a - (hyphen) at the end of the first syllable.
 
+* Abbreviations and ligatures in the text can be calculated later.
 
-### Notes
 
-* A list of strings makes it very human readable.
 
-* The three first elements of the list have a special meaning: name, original clef and key signature. Perhaps that information should be included in a different structure as a "header". The time signature can change in the middle of the piece, so it should not be part of that "header".
-
-* 'time 2/2' should be substituted by a more meaningful notation.
-
-* The rests can be grouped in any way. The exact distribution of rests is calculated later.
-
-* Abreviations and ligatures in the text can be calculated later.
 
