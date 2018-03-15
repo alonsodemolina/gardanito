@@ -128,6 +128,7 @@ silencio.semiminima n
 silencio.fusa o
 silencio.semifusa p
 ligadura ~
+compas c
 puntillo.-1 æ
 puntillo.1 ß
 puntillo.3 ð

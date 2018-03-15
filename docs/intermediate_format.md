@@ -9,7 +9,7 @@ and optionally a single string which encodes the lyrics.
 This example is the beginning of "O quam gloriosum est"
 
 ```python
-['Cantus', 'c1' '0', 'time 2/2', 'ligature 2', 'longa G3', 'brevis A3', 'semibrevis A3', 'minima A3', 'minima A3', 'dotted minima A3', 'semiminima B3', 'ligature 2', 'brevis C4', 'dotted brevis D4', 'minima D4', 'minima G3', 'dotted minima C4', 'semiminima B3', 'semiminima A3', 'semiminima G3', 'minima A3', 'semibrevis G3', 'minima F#3', 'semibrevis G3', 'brevis G3', 'semibrevis rest', 'minima rest', 'minima C3']
+['Cantus', 'c1', '0', 'time 2/2', 'ligature 2', 'longa G3', 'brevis A3', 'semibrevis A3', 'minima A3', 'minima A3', 'dotted minima A3', 'semiminima B3', 'ligature 2', 'brevis C4', 'dotted brevis D4', 'minima D4', 'minima G3', 'dotted minima C4', 'semiminima B3', 'semiminima A3', 'semiminima G3', 'minima A3', 'semibrevis G3', 'minima F#3', 'semibrevis G3', 'brevis G3', 'semibrevis rest', 'minima rest', 'minima C3']
 ```
 
 ```python
@@ -52,10 +52,16 @@ Think about a more meaningful notation.
 **Dotted notes:** 
 `'dotted duration NOTEoctave'`
 
+* ¿Sería más fácil de analizar si fuera en el orden `'duration NOTEoctave dotted'` ?
+
 **Colored notes:** 
 `'colored duration NOTEoctave'`
 
 * _duration_ is the notated duration
+
+* ¿Sería más fácil de analizar si fuera en el orden `'duration NOTEoctave colored'` ?
+
+* Think about the case both dotted and colored
 
 **Rests:** 
 `'duration rest'`
