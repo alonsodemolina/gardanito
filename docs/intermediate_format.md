@@ -35,7 +35,7 @@ Any string
 * _n_ is the line. 1 is the bottom line
 
 **Key signature:** 
-`'-1'` for one flat, `'0'` for nothing
+`'0'` for nothing, `'-1'` for one flat, `'-2'` for two flat
 
 **Time signature:** 
 Think about a more meaningful notation.

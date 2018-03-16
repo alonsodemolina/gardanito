@@ -153,7 +153,7 @@ incipitcantus=\markup{
 		\override Rest.style = #'neomensural
 		\override Staff.TimeSignature.style = #'neomensural
 		\cadenzaOn 
-		\clef "petrucci-c1"
+		\clef "petrucci-g"
 		\key c \major
 		\time 2/2
 		\[g'\longa a'\breve\]

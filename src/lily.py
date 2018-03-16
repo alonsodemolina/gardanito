@@ -170,19 +170,49 @@ def relative_to_absolute(tokens_rel, initial_note, octava):
         i=i+1
     return tokens_abs
 
+
+def analiza_incipit(incipit):
+    m=re.search('instrumentName\s*=\s*"([^"]*)"', incipit)
+    if m:
+        label=m.group(1).strip()
+    else:
+        label="Staff"
+    m=re.search('\\\\key\s*([a-z]*)', incipit)
+    if m:
+        key_name=m.group(1)
+    else:
+        key_name="c"
+    key={"c":0, "f":-1, "bes":-2}[key_name]
+    m=re.search('petrucci-([^"]*)"', incipit)
+    if m:
+        clef=m.group(1)
+    else:
+        clef="g2"
+    if clef=="g":
+        clef="g2"
+    return (label, clef, key)
+
+
+
 notas={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
+
 lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 texto=quitar_comments(lilyfile.read())
-cantus, texto = extraer(texto, "cantus")
 
-s=cantus.find('{')
+voz="cantus"
+incipit, texto=extraer(texto, "incipit" + voz)
+(label, clef, key)=analiza_incipit(incipit)
+print label, clef, key
 
-tokens=tokenizar(cantus[s:])
+musica, texto = extraer(texto, voz)
+s=musica.find('{')
+tokens=tokenizar(musica[s:])
 
 # \relative c''
-m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',cantus[:s])
+m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
 if m:
     initial_note=notas[m.group(1)[0]]
     octava=contar_comas(m.group(2))
     tokens=relative_to_absolute(tokens, initial_note, octava)
 print tokens
+
