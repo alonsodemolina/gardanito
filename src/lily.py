@@ -128,7 +128,49 @@ def leerbloque(string, pos):
         j=j+1
     return bloque, j-pos
 
+def contar_comas(comas):
+    if comas == "":
+        return 0
+    elif comas[0]=='\'':
+        return len(comas)
+    else:
+        return -len(comas)
 
+def comas_string(octava):
+    if octava == 0:
+        return ""
+    if octava > 0:
+        return "'" * octava
+    else:
+        return "," * (-octava)
+    
+
+def relative_to_absolute(tokens_rel, initial_note, octava):
+    tokens_abs=[]
+    i=0
+    old_note=initial_note
+    longitud=len(tokens_rel)
+    while i < longitud:
+        item=tokens_rel[i]
+        tokens_abs.append(item)
+        letter=item[0]
+        comas=0
+        if i<longitud-1 and tokens_rel[i+1] in {",", "'"}:
+            comas=contar_comas(tokens_rel[i+1])
+            i=i+1
+        if letter in set(notas.keys()):
+            note=notas[letter]
+            diferencia=note-old_note
+            if abs(diferencia)>3:
+                comas = comas-1 if diferencia>0 else comas+1
+            octava=comas+octava
+            if octava: # si octava es 0 no hay que anadir nada
+                tokens_abs.append(comas_string(octava))
+            old_note=note
+        i=i+1
+    return tokens_abs
+
+notas={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
 lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 texto=quitar_comments(lilyfile.read())
 cantus, texto = extraer(texto, "cantus")
@@ -136,4 +178,11 @@ cantus, texto = extraer(texto, "cantus")
 s=cantus.find('{')
 
 tokens=tokenizar(cantus[s:])
+
+# \relative c''
+m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',cantus[:s])
+if m:
+    initial_note=notas[m.group(1)[0]]
+    octava=contar_comas(m.group(2))
+    tokens=relative_to_absolute(tokens, initial_note, octava)
 print tokens
