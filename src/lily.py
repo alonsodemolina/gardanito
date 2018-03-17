@@ -190,8 +190,36 @@ def analiza_incipit(incipit):
         clef="g2"
     if clef=="g":
         clef="g2"
-    return (label, clef, key)
+    m=re.search('\\\\(time\s*[0-9]*/[0-9]*)', incipit)
+    if m:
+        compas=m.group(1)
+    else:
+        compas="time 4/4"
+    return (label, clef, key, compas)
 
+def procesar_letra(silabas, melismas):
+    filtro=[]
+    i=0 # silabas
+    j=0 # filtro
+    while i<len(silabas):
+        item=silabas[i]
+        if item == "__":
+            pass
+        elif item == "--":
+            filtro[j-1]=filtro[j-1] + "-"
+        else:
+            filtro.append(item)
+            j=j+1
+        i=i+1
+    # quitamos los melismas
+    sinmelismas=[]
+    i=0
+    while i<len(filtro):
+        item=filtro[i]
+        if not melismas[i]:
+            sinmelismas.append(item)
+        i=i+1
+    return ' '.join(sinmelismas)
 
 
 notas={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
@@ -201,12 +229,19 @@ texto=quitar_comments(lilyfile.read())
 
 voz="cantus"
 incipit, texto=extraer(texto, "incipit" + voz)
-(label, clef, key)=analiza_incipit(incipit)
-print label, clef, key
+(label, clef, key, compas)=analiza_incipit(incipit)
+print label, clef, key, compas
 
 musica, texto = extraer(texto, voz)
 s=musica.find('{')
 tokens=tokenizar(musica[s:])
+
+lyrics, texto=extraer(texto, "texto" + voz)
+s=lyrics.find('{')
+silabas=lyrics[s+1:-1].split()
+melismas=[0]*1000
+lyrics=procesar_letra(silabas, melismas)
+print lyrics
 
 # \relative c''
 m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
@@ -214,5 +249,5 @@ if m:
     initial_note=notas[m.group(1)[0]]
     octava=contar_comas(m.group(2))
     tokens=relative_to_absolute(tokens, initial_note, octava)
-print tokens
+
 
