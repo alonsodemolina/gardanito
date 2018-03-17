@@ -50,7 +50,7 @@ def tokenizar(bloque):
             token, long = leernumero(bloque, i)
         elif c=='*':
             token, long = leerproporcion(bloque, i)
-        elif c in {'\'', ',', '.', '-', '_'}:
+        elif c in {'\'', ',', '.'}:
             token, long = leersignos(bloque, i, c)
         elif c=='\\':
             token, long = leercomando(bloque, i)
@@ -215,7 +215,7 @@ def procesar_letra(silabas, melismas):
             while filtro[a] == "_":
                 a=a-1
             filtro[a]=filtro[a] + "]"
-        elif item == '\\mt':
+        elif item == '\\mt': # \mt #number is a macro to displace lyrics horizontally
             i=i+1
         else:
             if italicas and item != '_':
