@@ -199,6 +199,7 @@ def analiza_incipit(incipit):
 
 def procesar_letra(silabas, melismas):
     filtro=[]
+    italicas=0
     i=0 # silabas
     j=0 # filtro
     while i<len(silabas):
@@ -207,7 +208,19 @@ def procesar_letra(silabas, melismas):
             pass
         elif item == "--":
             filtro[j-1]=filtro[j-1] + "-"
+        elif item == '\\italicas':
+            italicas=1
+        elif item == '\\rectas':
+            a=j-1
+            while filtro[a] == "_":
+                a=a-1
+            filtro[a]=filtro[a] + "]"
+        elif item == '\\mt':
+            i=i+1
         else:
+            if italicas and item != '_':
+                item="[" + item
+                italicas=0
             filtro.append(item)
             j=j+1
         i=i+1
@@ -227,7 +240,7 @@ notas={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
 lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 texto=quitar_comments(lilyfile.read())
 
-voz="cantus"
+voz="altus"
 incipit, texto=extraer(texto, "incipit" + voz)
 (label, clef, key, compas)=analiza_incipit(incipit)
 print label, clef, key, compas
