@@ -63,6 +63,11 @@ Think about a more meaningful notation.
 
 * Think about the case both dotted and colored
 
+**Cautionary accidentals:**
+`'duration NOTEoctave explicit'`
+
+* To indicate E notes that are not fa super la, and similar cases
+
 **Rests:** 
 `'duration rest'`
 
