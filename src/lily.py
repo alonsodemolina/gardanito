@@ -2,7 +2,6 @@
 
 import re
 
-
 def quitar_comments(string):
     # eliminamos bloques %{ ... %}
     s=re.sub(r'%{.*?%}', r'', string, flags=re.DOTALL)
@@ -234,33 +233,78 @@ def procesar_letra(silabas, melismas):
         i=i+1
     return ' '.join(sinmelismas)
 
+def hallar_melismas(tokens):
+    # los melismas pueden estar activados por algunos elementos
+    # dependiendo de la variable de lilypond melismaBusyProperties
+    # la variable autoBeaming tambien influye
+    # TODO: leer y analizar esas variables
+    ligaturebusy=1
+    tiebusy=1
+    beambusy=0
+    # se pueden anadir mas casos: slur, phrasingslur, \melisma \melismaEnd
+    melismas=[]
+    i=0
+    melismatie=0
+    melismaligature=0
+    melisma=0
+    while i<len(tokens):
+        item=tokens[i]
+        letter=item[0]
+        if item=='~' and tiebusy:
+            melismatie=1
+        if item=='\\[' and ligaturebusy:
+            melismaligature=1
+        if item=='\\]' and ligaturebusy:
+            melisma=melisma-1
+        if item=='[' and beambusy:
+            melisma=melisma+1
+        if item==']' and beambusy:
+            melisma=melisma-1
+        if letter in set(notas.keys()):
+            if melismatie==1:
+                melismas.append(1)
+                melismatie=0
+            else:
+                melismas.append(melisma)
+            if melismaligature:
+                melismaligature=0
+                melisma=melisma+1
+        i=i+1
+    return melismas
+
+
+#################   main   #################
 
 notas={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
-
 lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 texto=quitar_comments(lilyfile.read())
 
-voz="altus"
+voz="cantus"
+
+# incipit
 incipit, texto=extraer(texto, "incipit" + voz)
 (label, clef, key, compas)=analiza_incipit(incipit)
 print label, clef, key, compas
 
+# musica
 musica, texto = extraer(texto, voz)
 s=musica.find('{')
 tokens=tokenizar(musica[s:])
-
-lyrics, texto=extraer(texto, "texto" + voz)
-s=lyrics.find('{')
-silabas=lyrics[s+1:-1].split()
-melismas=[0]*1000
-lyrics=procesar_letra(silabas, melismas)
-print lyrics
-
-# \relative c''
+# si es un bloque \relative lo convertimos en absoluto
 m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
 if m:
     initial_note=notas[m.group(1)[0]]
     octava=contar_comas(m.group(2))
     tokens=relative_to_absolute(tokens, initial_note, octava)
+print tokens
+
+# texto
+melismas=hallar_melismas(tokens)
+lyrics, texto=extraer(texto, "texto" + voz)
+s=lyrics.find('{')
+silabas=lyrics[s+1:-1].split()
+lyrics=procesar_letra(silabas, melismas)
+print lyrics
+
 
 
