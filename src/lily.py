@@ -44,22 +44,22 @@ def tokenizar(bloque):
             i=i+1
             continue
         elif c.isalpha():
-            token, long = leerpalabra(bloque, i)
+            token, length = leerpalabra(bloque, i)
         elif c.isdigit():
-            token, long = leernumero(bloque, i)
+            token, length = leernumero(bloque, i)
         elif c=='*':
-            token, long = leerproporcion(bloque, i)
+            token, length = leerproporcion(bloque, i)
         elif c in {'\'', ',', '.'}:
-            token, long = leersignos(bloque, i, c)
+            token, length = leersignos(bloque, i, c)
         elif c=='\\':
-            token, long = leercomando(bloque, i)
+            token, length = leercomando(bloque, i)
         elif c=='{':
-            token, long = leerbloque(bloque, i)
+            token, length = leerbloque(bloque, i)
         else:
             token=c
-            long=1
+            length=1
         l.append(token)
-        i=i+long
+        i=i+length
     return l
 
 def leerpalabra(string, pos):
@@ -152,13 +152,12 @@ def relative_to_absolute(tokens_rel, initial_note, octava):
     while i < longitud:
         item=tokens_rel[i]
         tokens_abs.append(item)
-        letter=item[0]
         comas=0
         if i<longitud-1 and tokens_rel[i+1] in {",", "'"}:
             comas=contar_comas(tokens_rel[i+1])
             i=i+1
-        if letter in set(notas.keys()):
-            note=notas[letter]
+        if is_a_note(item):
+            note=notas[item[0]]
             diferencia=note-old_note
             if abs(diferencia)>3:
                 comas = comas-1 if diferencia>0 else comas+1
@@ -249,7 +248,6 @@ def hallar_melismas(tokens):
     melisma=0
     while i<len(tokens):
         item=tokens[i]
-        letter=item[0]
         if item=='~' and tiebusy:
             melismatie=1
         if item=='\\[' and ligaturebusy:
@@ -260,7 +258,7 @@ def hallar_melismas(tokens):
             melisma=melisma+1
         if item==']' and beambusy:
             melisma=melisma-1
-        if letter in set(notas.keys()):
+        if is_a_note(item):
             if melismatie==1:
                 melismas.append(1)
                 melismatie=0
@@ -272,6 +270,113 @@ def hallar_melismas(tokens):
         i=i+1
     return melismas
 
+def is_a_note(string):
+    if string[0].lower() in set(notas.keys()):
+        return True
+    else:
+        return False
+
+def read_note(i, tokens):
+    value_factor = 2 # TODO: calculate it
+    durations={ '32': 0.5,
+                '16': 1,
+                '8': 2,
+                '4': 4,
+                '2': 8,
+                '1': 16,
+                '\\breve': 32,
+                '\\longa': 64,
+                '\\maxima': 128
+    }
+    accidentals={'is': '#', 'es': 'b', 's': 'b'}
+    l=len(tokens)
+    k=0
+    comas=0
+    duration=""
+    cautionary=""
+    note=tokens[i]
+    letter=note[0].upper()
+    sufix=note[1:]
+    if sufix == "":
+        accidental=""
+    else:
+        accidental=accidentals[sufix]
+    note=letter + accidental
+    if i+1 < l:
+        comas=tokens[i+1]
+        k=1
+    if i+2 < l:
+        if tokens[i+2] == '!':
+            cautionary='!'
+            i=i+1
+            k=2
+        elif tokens[i+2] == '?':
+            i=i+1
+            k=2
+    if i+2 < l:
+        d=tokens[i+2]
+        if d.isdigit() or d=='\\breve' or d=='\\longa' or d=='\\maxima':
+            duration=durations[tokens[i+2]]
+            k=k+1
+            if i+3 < l:
+                if tokens[i+3]==".":
+                    duration=duration+duration/2
+                    k=k+1
+            duration=int(duration*value_factor)
+    note=note+str(contar_comas(comas))
+    return note, str(duration), cautionary, k
+
+
+def normalize(tokens):
+    normalized=[]
+    i=0
+    old_duration='8'
+    tie=0
+    while i<len(tokens):
+        item=tokens[i]
+        if is_a_note(item):
+            (note, duration, cautionary, items_read)=read_note(i, tokens)
+            if duration == "":
+                duration=old_duration
+            else:
+                old_duration=duration
+            if not tie:
+                normalized.append(note)
+                normalized.append(duration)
+                if cautionary == "!":
+                    normalized.append('!')
+            else:
+                j=-1
+                while not normalized[j].isdigit():
+                    j=j-1
+                normalized[j]=str( int(normalized[j]) + int(duration) )
+            i=i+items_read
+            tie=0
+        elif item=='~':
+            tie=1
+        else:
+            normalized.append(item)
+        i=i+1
+    print normalized
+    return normalized
+
+
+def parse(tokens):
+    intermediate=[]
+    i=0
+    while i<len(tokens):
+        item=tokens[i]
+        if item=='\\[':
+            j=i+1
+            notes_in_ligature=0
+            while tokens[j] != '\\]':
+                if is_a_note(tokens[j]):
+                    notes_in_ligature=notes_in_ligature+1
+                j=j+1
+            intermediate.append("ligature " + str(notes_in_ligature))
+        i=i+1
+    print intermediate
+    return intermediate
 
 #################   main   #################
 
@@ -296,10 +401,11 @@ if m:
     initial_note=notas[m.group(1)[0]]
     octava=contar_comas(m.group(2))
     tokens=relative_to_absolute(tokens, initial_note, octava)
-print tokens
+melismas=hallar_melismas(tokens)
+tokens=normalize(tokens)
+intermediate=parse(tokens)
 
 # texto
-melismas=hallar_melismas(tokens)
 lyrics, texto=extraer(texto, "texto" + voz)
 s=lyrics.find('{')
 silabas=lyrics[s+1:-1].split()
