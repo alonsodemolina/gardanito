@@ -52,16 +52,7 @@ Think about a more meaningful notation.
 **Dotted notes:** 
 `'dotted duration NOTEoctave'`
 
-* ¿Sería más fácil de analizar si fuera en el orden `'duration NOTEoctave dotted'` ?
-
-**Colored notes:** 
-`'colored duration NOTEoctave'`
-
 * _duration_ is the notated duration
-
-* ¿Sería más fácil de analizar si fuera en el orden `'duration NOTEoctave colored'` ?
-
-* Think about the case both dotted and colored
 
 **Cautionary accidentals:**
 `'duration NOTEoctave explicit'`

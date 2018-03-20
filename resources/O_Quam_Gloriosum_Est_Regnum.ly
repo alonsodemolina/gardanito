@@ -29,14 +29,14 @@ hcomposer="Victoria"
 
 global =  {\time  2/2 \key c \major  \skip 1*59 \bar "|."}
 
-cantus =  \relative c''{
+cantus =  \relative c''{ 
 \[g1  ~g  a \]
 a2 a4 a a4. b8 \[c2 d2.\] d4 g, c4.  b8[ a g] a4 g2 fis4 g2 g2~g r2 r4 c, f g  a8[ g a b] c4. b8 a4  g8[ f] e4.  d16[ c] d2 e4 e %\break
 g2 r4 g c2. b4 c4.  b8[ a g] g4~ g fis g2 ~ g r2 c1 b2 a~ a g a1 b2 c2~ c b c a g1 g2 r R1
 r4 b4 g4. a8 b4 g \[a2 g\] a b4 b c4. b8 a4 g fis g~ g fis g2 ~ g r2 r2 d'2~ d c b a~a4  g8[ f g e] f4~ f8[ e]  e[ d16 c] d4. e8 
 %\break
 f2 g r2 c2~ c b
-a2 g4. f8 e4  d8[ c] d2   c2 r4 g'4 a2 b c4 \[a2 g4 ~ \] g fis g g e fis g e d d' b cis d2. c4 b a4. g8 g4~ g  fis8[ e] fis4 fis g1~g1~g~g\breve*1/2 g'4.
+a2 g4. f8 e4  d8[ c] d2   c2 r4 g'4 a2 b c4 \[a2 g4 ~ \] g fis g g e fis g e d d' b cis d2. c4 b a4. g8 g4~ g  fis8[ e] fis4 fis g1~g1~g~g\breve*1/2
 }
 
 altus =  \relative c'{
