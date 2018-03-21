@@ -82,6 +82,86 @@ def tokenize(bloque):
         i=i+length
     return l
 
+def tokenize2(bloque):
+    l=[]
+    note_regexp=re.compile(
+            "(c|d|e|f|g|a|b)"
+            "((s|es|is)*)\s*"
+            "((,|')*)\s*"
+            "((!|\?)?)\s*"
+            "(\d+|\\\\breve|\\\\longa|\\\\maxima)?\s*"
+            "((\.)*)"
+    )
+    rest_regexp=re.compile(
+            "(r|R)\s*"
+            "(\d+|\\\\breve|\\\\longa|\\\\maxima)?\s*"
+            "((\.)*)\s*"
+            "\*\s*"
+            "((\d+)/(\d+)(\s*\*\s*(\d+))?|(\d+))"
+    )
+    i=1
+    old_duration=8
+    while True:
+        c=bloque[i]
+        m=note_regexp.match(bloque[i:])
+        r=rest_regexp.match(bloque[i:])
+        if c=='}':
+            break
+        elif c.isspace():
+            i=i+1
+            continue
+        elif m:
+            # a note is the list
+            # [diatonic, chromatic, octave, cautionary, duration]
+            # diatonic value from 0 to 6 
+            diat=notes[m.group(1)] 
+            # chromatic: doubleflat is -2, flat is -1, etc.
+            sufix=m.group(2)
+            if sufix:      
+                chrom=lily_accidentals[sufix]
+            else:
+                chrom=0
+            # octave. Should be +3 instead of +2 if central do is C4
+            octave=count_commas(m.group(4))+2
+            # cautionay: '?', '!' or ''
+            caut=m.group(6)
+            # duration in fusas
+            d=m.group(8)
+            if d:
+                dur=durations[d]
+                puntillos=len(m.group(9))
+                dur=dur*(2-1/2**puntillos)
+                dur=int(dur*value_factor)
+                old_duration=dur
+            else:
+                dur=old_duration
+            token=[diat,chrom,octave,caut,dur]
+            length=len(m.group(0))
+        elif r:
+
+            token=[r.group(1), r.group(2), r.group(3), r.group(6), r.group(7), r.group(9), r.group(10)]
+            length=len(r.group(0))
+        elif c.isalpha():
+            token, length = leerpalabra(bloque, i)
+        elif c.isdigit():
+            token, length = leernumero(bloque, i)
+        elif c=='*':
+            token, length = leerproporcion(bloque, i)
+        elif c in {'\'', ',', '.'}:
+            token, length = leersignos(bloque, i, c)
+        elif c=='#':
+            token, length = leerscheme(bloque, i)
+        elif c=='\\':
+            token, length = leercomando(bloque, i)
+        elif c=='{':
+            token, length = leerbloque(bloque, i)
+        else:
+            token=c
+            length=1
+        l.append(token)
+        i=i+length
+    return l
+
 def leerpalabra(string, pos):
     palabra=""
     j=pos
@@ -157,7 +237,7 @@ def leerbloque(string, pos):
         j=j+1
     return bloque, j-pos
 
-def contar_comas(comas):
+def count_commas(comas):
     if comas == "":
         return 0
     elif comas[0]=='\'':
@@ -184,10 +264,10 @@ def relative_to_absolute(tokens_rel, initial_note, octava):
         tokens_abs.append(item)
         comas=0
         if i<longitud-1 and tokens_rel[i+1] in {",", "'"}:
-            comas=contar_comas(tokens_rel[i+1])
+            comas=count_commas(tokens_rel[i+1])
             i=i+1
         if is_a_note(item):
-            note=notas[item[0]]
+            note=notes[item[0]]
             diferencia=note-old_note
             if abs(diferencia)>3:
                 comas = comas-1 if diferencia>0 else comas+1
@@ -301,7 +381,7 @@ def hallar_melismas(tokens):
     return melismas
 
 def is_a_note(string):
-    if string[0].lower() in set(notas.keys()):
+    if string[0].lower() in set(notes.keys()):
         return True
     else:
         return False
@@ -351,7 +431,7 @@ def read_note(i, tokens):
                     duration=duration+duration/2
                     k=k+1
             duration=int(duration*value_factor)
-    note=note+str(contar_comas(comas)+2) # should be +3 to make central do C4
+    note=note+str(count_commas(comas)+2) # should be +3 to make central do C4
     return note, str(duration), cautionary, k
 
 def read_rest(i, tokens):
@@ -462,11 +542,12 @@ def convert_to_intermediate(voz, texto):
     musica, texto = extraer(texto, voz)
     s=musica.find('{')
     tokens=tokenize(musica[s:])
+    print (tokens)
     # si es un bloque \relative lo convertimos en absoluto
     m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
     if m:
-        initial_note=notas[m.group(1)[0]]
-        octava=contar_comas(m.group(2))
+        initial_note=notes[m.group(1)[0]]
+        octava=count_commas(m.group(2))
         tokens=relative_to_absolute(tokens, initial_note, octava)
     melismas=hallar_melismas(tokens)
     tokens=normalize(tokens)
@@ -500,8 +581,9 @@ def print_in_parallel(music,lyrics):
 
 #################   main   #################
 
-notas={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
+notes={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
 accidentals={'is': '#', 'es': 'b', 's': 'b'}
+lily_accidentals={'ses':-2, 'eses':-2, 's':-1, 'es':-1, 'is':1, 'isis':2}
 durations={ '32': 0.5,
             '16': 1,
             '8': 2,
@@ -532,10 +614,11 @@ lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
 texto=quitar_comments(lilyfile.read())
 
 
-for voz in ['cantus', 'altus', 'tenor', 'bassus']:
+#for voz in ['cantus', 'altus', 'tenor', 'bassus']:
+for voz in ['cantus']:
     music, lyrics = convert_to_intermediate(voz, texto)
-    print (music)
-    print (lyrics)
-    print ()
+    #print (music)
+    #print (lyrics)
     print_in_parallel(music,lyrics)
+    #print ()
 
