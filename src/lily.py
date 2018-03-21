@@ -14,7 +14,7 @@ TODO:
     - time signature changes
     - more testing
 
-    - read a book on python and re-write this whole script
+    - read a book on python and re-write this whole mess
 
 '''
 
@@ -480,6 +480,21 @@ def convert_to_intermediate(voz, texto):
     lyrics=procesar_letra(silabas, melismas)
     return music, lyrics
 
+def print_in_parallel(music,lyrics):
+    print ('\t' + music[0])
+    print ('\t' + music[1])
+    print ('\t' + music[2])
+    lyrics_list=lyrics.split()
+    j=0
+    for item in music[3:]:
+        if "ligature" in item:
+            n=int(item.split()[1])
+            lyrics_list[j+1:j+1]='_' * (n-1)
+        if re.search('[CDEFGAB].?\d', item):
+            print(lyrics_list[j] + "\t" + item)
+            j=j+1
+        else:
+            print("\t" + item)
 
 
 
@@ -499,18 +514,21 @@ durations={ '32': 0.5,
 figure = {'1':'semifusa', 
           '2':'fusa', 
           '4':'semiminima', 
-          '6': 'dotted semiminima', 
+          '6':'dotted semiminima', 
           '8':'minima', 
-          '12': 'dotted minima', 
+          '12':'dotted minima', 
           '16':'semibrevis', 
-          '24': 'dotted semibrevis',
+          '24':'dotted semibrevis',
           '32':'brevis', 
+          '48':'dotted brevis',
           '64':'longa', 
+          '96':'dotted longa',
           '128': 'maxima' }
 value_factor = 2 # TODO: calculate it
 
 #lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
-lilyfile=open("../resources/Pueri_Hebraeorum.ly")
+#lilyfile=open("../resources/Pueri_Hebraeorum.ly")
+lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
 texto=quitar_comments(lilyfile.read())
 
 
@@ -519,4 +537,5 @@ for voz in ['cantus', 'altus', 'tenor', 'bassus']:
     print (music)
     print (lyrics)
     print ()
+    print_in_parallel(music,lyrics)
 
