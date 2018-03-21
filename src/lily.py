@@ -13,12 +13,46 @@ TODO:
     - transposition
     - time signature changes
     - more testing
+    - translate to English
 
     - read a book on python and re-write this whole mess
 
 '''
 
 import re
+
+notes={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
+
+lily_accidentals={'ses':-2, 'eses':-2, 's':-1, 'es':-1, 'is':1, 'isis':2}
+
+durations={ '32': 0.5,
+            '16': 1,
+            '8': 2,
+            '4': 4,
+            '2': 8,
+            '1': 16,
+            '\\breve': 32,
+            '\\longa': 64,
+            '\\maxima': 128
+}
+
+figure = {'1':'semifusa', 
+          '2':'fusa', 
+          '4':'semiminima', 
+          '6':'dotted semiminima', 
+          '8':'minima', 
+          '12':'dotted minima', 
+          '16':'semibrevis', 
+          '24':'dotted semibrevis',
+          '32':'brevis', 
+          '48':'dotted brevis',
+          '64':'longa', 
+          '96':'dotted longa',
+          '128': 'maxima'
+}
+
+value_factor = 2 # TODO: calculate it
+
 
 def quitar_comments(string):
     # eliminamos bloques %{ ... %}
@@ -51,38 +85,8 @@ def extraer(texto, string):
     resto=texto[:string_start+1] + texto[i:]
     return bloque, resto
 
-def tokenize(bloque):
-    l=[]
-    i=1
-    while True:
-        c=bloque[i]
-        if c=='}':
-            break
-        elif c.isspace():
-            i=i+1
-            continue
-        elif c.isalpha():
-            token, length = leerpalabra(bloque, i)
-        elif c.isdigit():
-            token, length = leernumero(bloque, i)
-        elif c=='*':
-            token, length = leerproporcion(bloque, i)
-        elif c in {'\'', ',', '.'}:
-            token, length = leersignos(bloque, i, c)
-        elif c=='#':
-            token, length = leerscheme(bloque, i)
-        elif c=='\\':
-            token, length = leercomando(bloque, i)
-        elif c=='{':
-            token, length = leerbloque(bloque, i)
-        else:
-            token=c
-            length=1
-        l.append(token)
-        i=i+length
-    return l
 
-def tokenize2(bloque):
+def parse(bloque):
     l=[]
     note_regexp=re.compile(
             "(c|d|e|f|g|a|b)"
@@ -96,8 +100,10 @@ def tokenize2(bloque):
             "(r|R)\s*"
             "(\d+|\\\\breve|\\\\longa|\\\\maxima)?\s*"
             "((\.)*)\s*"
+            "("
             "\*\s*"
             "((\d+)/(\d+)(\s*\*\s*(\d+))?|(\d+))"
+            ")?"
     )
     i=1
     old_duration=8
@@ -110,6 +116,7 @@ def tokenize2(bloque):
         elif c.isspace():
             i=i+1
             continue
+        # Note
         elif m:
             # a note is the list
             # [diatonic, chromatic, octave, cautionary, duration]
@@ -121,8 +128,7 @@ def tokenize2(bloque):
                 chrom=lily_accidentals[sufix]
             else:
                 chrom=0
-            # octave. Should be +3 instead of +2 if central do is C4
-            octave=count_commas(m.group(4))+2
+            octave=count_commas(m.group(4))
             # cautionay: '?', '!' or ''
             caut=m.group(6)
             # duration in fusas
@@ -131,24 +137,46 @@ def tokenize2(bloque):
                 dur=durations[d]
                 puntillos=len(m.group(9))
                 dur=dur*(2-1/2**puntillos)
-                dur=int(dur*value_factor)
+                dur=dur*value_factor
                 old_duration=dur
             else:
                 dur=old_duration
-            token=[diat,chrom,octave,caut,dur]
+            token=[diat,chrom,octave,caut,int(dur)]
             length=len(m.group(0))
+        # Rest
         elif r:
-
-            token=[r.group(1), r.group(2), r.group(3), r.group(6), r.group(7), r.group(9), r.group(10)]
-            length=len(r.group(0))
+            # A rest is a list ['r', duration]
+            # duration is the number of fuses
+            if r.group(11):
+                repeats=int(r.group(11))
+            elif r.group(10):
+                repeats=int(r.group(10))
+            else:
+                repeats=1
+            if r.group(7):
+                numerator=int(r.group(7))
+                denominator=int(r.group(8))
+            else:
+                numerator=1
+                denominator=1
+            d=r.group(2)
+            if d:
+                dur=durations[d]
+                puntillos=len(r.group(3))
+                dur=dur*(2-1/2**puntillos)
+                old_duration=dur
+            else:
+                dur=old_duration
+            dur=dur*value_factor*numerator/denominator
+            token=['r', int(dur)]
+            for _ in range(repeats):
+                l.append(token)
+            i=i+len(r.group(0))
+            continue
         elif c.isalpha():
             token, length = leerpalabra(bloque, i)
-        elif c.isdigit():
-            token, length = leernumero(bloque, i)
         elif c=='*':
             token, length = leerproporcion(bloque, i)
-        elif c in {'\'', ',', '.'}:
-            token, length = leersignos(bloque, i, c)
         elif c=='#':
             token, length = leerscheme(bloque, i)
         elif c=='\\':
@@ -172,15 +200,6 @@ def leerpalabra(string, pos):
         letra=string[j]
     return palabra, j-pos
 
-def leernumero(string, pos):
-    numero=""
-    j=pos
-    digito=string[j]
-    while digito.isdigit():
-        numero=numero + digito
-        j=j+1
-        digito=string[j]
-    return numero, j-pos
 
 def leerproporcion(string, pos):
     proporcion=""
@@ -193,15 +212,6 @@ def leerproporcion(string, pos):
         c=string[j]
     return proporcion, j-pos
 
-def leersignos(string, pos, signo):
-    signos=""
-    j=pos
-    c=string[j]
-    while c==signo:
-        signos=signos + c
-        j=j+1
-        c=string[j]
-    return signos, j-pos
 
 def leerscheme(string, pos):
     scheme=""
@@ -237,46 +247,41 @@ def leerbloque(string, pos):
         j=j+1
     return bloque, j-pos
 
-def count_commas(comas):
-    if comas == "":
+def count_commas(commas):
+    if commas == "":
         return 0
-    elif comas[0]=='\'':
-        return len(comas)
+    elif commas[0]=='\'':
+        return len(commas)
     else:
-        return -len(comas)
+        return -len(commas)
 
-def comas_string(octava):
-    if octava == 0:
+def commas_string(octave):
+    if octave == 0:
         return ""
-    if octava > 0:
-        return "'" * octava
+    if octave > 0:
+        return "'" * octave
     else:
-        return "," * (-octava)
+        return "," * (-octave)
     
 
-def relative_to_absolute(tokens_rel, initial_note, octava):
-    tokens_abs=[]
-    i=0
+
+def relative_to_absolute(tokens, initial_note, octave):
     old_note=initial_note
-    longitud=len(tokens_rel)
-    while i < longitud:
-        item=tokens_rel[i]
-        tokens_abs.append(item)
-        comas=0
-        if i<longitud-1 and tokens_rel[i+1] in {",", "'"}:
-            comas=count_commas(tokens_rel[i+1])
-            i=i+1
+    i=0
+    print (octave)
+    while i<len(tokens):
+        item=tokens[i]
         if is_a_note(item):
-            note=notes[item[0]]
-            diferencia=note-old_note
-            if abs(diferencia)>3:
-                comas = comas-1 if diferencia>0 else comas+1
-            octava=comas+octava
-            if octava: # si octava es 0 no hay que anadir nada
-                tokens_abs.append(comas_string(octava))
+            [note, _, comas, _, _]=item
+            difference = note - old_note
+            if abs(difference)>3:
+                comas = comas - 1 if difference>0 else comas + 1
+            octave=comas+octave
+            item[2]=octave
             old_note=note
+            tokens[i]=item
         i=i+1
-    return tokens_abs
+    return
 
 
 def analize_incipit(incipit):
@@ -305,7 +310,7 @@ def analize_incipit(incipit):
         compas="time 4/4"
     return (label, clef, key, compas)
 
-def procesar_letra(silabas, melismas):
+def process_lyrics(silabas, melismas):
     filtro=[]
     italicas=0
     i=0 # silabas
@@ -341,6 +346,7 @@ def procesar_letra(silabas, melismas):
             sinmelismas.append(item)
         i=i+1
     return ' '.join(sinmelismas)
+
 
 def hallar_melismas(tokens):
     # los melismas pueden estar activados por algunos elementos
@@ -380,138 +386,46 @@ def hallar_melismas(tokens):
         i=i+1
     return melismas
 
-def is_a_note(string):
-    if string[0].lower() in set(notes.keys()):
+def is_a_note(item):
+    if isinstance(item, list) and len(item)==5:
         return True
     else:
         return False
 
-def is_a_rest(string):
-    if string[0].lower() == 'r':
+def is_a_rest(item):
+    if isinstance(item, list) and len(item)==2:
         return True
     else:
         return False
 
-def read_note(i, tokens):
-    l=len(tokens)
-    k=0
-    comas=0
-    duration=""
-    cautionary=""
-    note=tokens[i]
-    letter=note[0].upper()
-    sufix=note[1:]
-    if sufix == "":
-        accidental=""
-    else:
-        accidental=accidentals[sufix]
-    note=letter + accidental
-    if i+1 < l:
-        comas=tokens[i+1]
-        if comas in {'\'', ','}:
-            i=i+1
-            k=1
-        else:
-            comas=""
-    if i+1 < l:
-        if tokens[i+1] == '!':
-            cautionary='!'
-            i=i+1
-            k=k+1
-        elif tokens[i+1] == '?':
-            i=i+1
-            k=k+1
-    if i+1 < l:
-        d=tokens[i+1]
-        if d.isdigit() or d=='\\breve' or d=='\\longa' or d=='\\maxima':
-            duration=durations[tokens[i+1]]
-            k=k+1
-            if i+2 < l:
-                if tokens[i+2]==".":
-                    duration=duration+duration/2
-                    k=k+1
-            duration=int(duration*value_factor)
-    note=note+str(count_commas(comas)+2) # should be +3 to make central do C4
-    return note, str(duration), cautionary, k
-
-def read_rest(i, tokens):
-    l=len(tokens)
-    k=0
-    duration=""
-    repeats=1
-    numerator=1
-    denominator=1
-    rest=tokens[i]
-    if i+1 < l:
-        d=tokens[i+1]
-        if d.isdigit() or d=='\\breve' or d=='\\longa' or d=='\\maxima':
-            duration=durations[tokens[i+1]]
-            k=1
-            if i+2 < l:
-                if tokens[i+2]==".":
-                    duration=duration+duration/2
-                    k=2
-                    i=i+1
-            if i+2 < l:
-                if tokens[i+2][0]=="*":
-                    numbers=tokens[i+2].split('*')
-                    fraction=numbers[1].split('/')
-                    if len(fraction)==1:
-                        repeats=numbers[1]
-                    else:
-                        numerator=fraction[0]
-                        denominator=fraction[1]
-                        if len(numbers)==3:
-                            repeats=numbers[2]
-                    k=k+1
-            duration=int(duration*value_factor*int(numerator)/int(denominator))
-    return str(duration), k, int(repeats)
 
 
-def normalize(tokens):
+
+def join_ties(tokens):
     normalized=[]
     i=0
-    old_duration='8'
     tie=0
     while i<len(tokens):
         item=tokens[i]
         if is_a_note(item):
-            (note, duration, cautionary, items_read)=read_note(i, tokens)
-            if duration == "":
-                duration=old_duration
-            else:
-                old_duration=duration
+            [note, _, _, _, duration]=item
             if not tie:
-                normalized.append(note)
-                normalized.append(duration)
-                if cautionary == "!":
-                    normalized.append('!')
+                normalized.append(item)
             else:
                 j=-1
-                while not normalized[j].isdigit():
+                while not is_a_note(normalized[j]):
                     j=j-1
-                normalized[j]=str( int(normalized[j]) + int(duration) )
-            i=i+items_read
+                normalized[j][4]=normalized[j][4] + duration
             tie=0
         elif item=='~':
             tie=1
-        elif is_a_rest(item):
-            (duration, items_read, repeats)=read_rest(i, tokens)
-            if duration == "":
-                duration=old_duration
-            else:
-                old_duration=duration
-            for _ in range(repeats):
-                normalized.append('rest')
-                normalized.append(duration)
-            i=i+items_read
         else:
             normalized.append(item)
         i=i+1
     return normalized
 
 
-def parse(tokens):
+def intermediate_format(tokens):
     intermediate=[]
     i=0
     while i<len(tokens):
@@ -524,42 +438,25 @@ def parse(tokens):
                     notes_in_ligature=notes_in_ligature+1
                 j=j+1
             intermediate.append("ligature " + str(notes_in_ligature))
-        elif is_a_note(item) or is_a_rest(item):
-            duration=(tokens[i+1])
-            if int(duration)>128: # no values greater than a maxima
-                duration='128'
-            intermediate.append(figure[duration] + " " + item)
-            i=i+1
+        elif is_a_note(item):
+            [diat, chrom, oct, caut, duration]=item
+            if duration>128: # no values greater than a maxima
+                duration=128
+            element=figure[str(duration)] + " " + synthesize(diat, chrom, oct)
+            if caut == '!':
+                element = element + ' explicit'
+            intermediate.append(element)
+        elif is_a_rest(item):
+            duration=item[1]
+            intermediate.append(figure[str(duration)] + " " + 'rest')
         i=i+1
     return intermediate
 
-def convert_to_intermediate(voz, texto):
-    # incipit
-    incipit, texto=extraer(texto, "incipit" + voz)
-    (label, clef, key, compas)=analize_incipit(incipit)
-
-    # musica
-    musica, texto = extraer(texto, voz)
-    s=musica.find('{')
-    tokens=tokenize(musica[s:])
-    print (tokens)
-    # si es un bloque \relative lo convertimos en absoluto
-    m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
-    if m:
-        initial_note=notes[m.group(1)[0]]
-        octava=count_commas(m.group(2))
-        tokens=relative_to_absolute(tokens, initial_note, octava)
-    melismas=hallar_melismas(tokens)
-    tokens=normalize(tokens)
-    intermediate=parse(tokens)
-    music=[label, clef, str(key), compas] + intermediate
-
-    # texto
-    lyrics, texto=extraer(texto, "texto" + voz)
-    s=lyrics.find('{')
-    silabas=lyrics[s+1:-1].split()
-    lyrics=procesar_letra(silabas, melismas)
-    return music, lyrics
+def synthesize(diat, chrom, oct):
+    note=['C', 'D', 'E', 'F', 'G', 'A', 'B'][diat]
+    acc=['bb','b','','#', '##'][chrom+2]
+    octave=str(oct+2) # should be +3 instead of +2 if central do is C4
+    return note+acc+octave
 
 def print_in_parallel(music,lyrics):
     print ('\t' + music[0])
@@ -578,35 +475,40 @@ def print_in_parallel(music,lyrics):
             print("\t" + item)
 
 
+def convert_to_intermediate(voz, texto):
+    # incipit
+    incipit, texto=extraer(texto, "incipit" + voz)
+    (label, clef, key, compas)=analize_incipit(incipit)
+
+    # musica
+    musica, texto = extraer(texto, voz)
+    s=musica.find('{')
+    tokens=parse(musica[s:])
+    # si es un bloque \relative lo convertimos en absoluto
+    m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
+    if m:
+        initial_note=notes[m.group(1)[0]]
+        octave=count_commas(m.group(2))
+        relative_to_absolute(tokens, initial_note, octave)
+    # melismas is a list with as many elements as notes.
+    # All its values are 0 except for the positions
+    # corresponding to notes with melismas
+    melismas=hallar_melismas(tokens)
+    tokens=join_ties(tokens)
+    intermediate=intermediate_format(tokens)
+
+    music=[label, clef, str(key), compas] + intermediate
+
+    # texto
+    lyrics, texto=extraer(texto, "texto" + voz)
+    s=lyrics.find('{')
+    silabas=lyrics[s+1:-1].split()
+    lyrics=process_lyrics(silabas, melismas)
+    return music, lyrics
+
+
 
 #################   main   #################
-
-notes={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
-accidentals={'is': '#', 'es': 'b', 's': 'b'}
-lily_accidentals={'ses':-2, 'eses':-2, 's':-1, 'es':-1, 'is':1, 'isis':2}
-durations={ '32': 0.5,
-            '16': 1,
-            '8': 2,
-            '4': 4,
-            '2': 8,
-            '1': 16,
-            '\\breve': 32,
-            '\\longa': 64,
-            '\\maxima': 128 }
-figure = {'1':'semifusa', 
-          '2':'fusa', 
-          '4':'semiminima', 
-          '6':'dotted semiminima', 
-          '8':'minima', 
-          '12':'dotted minima', 
-          '16':'semibrevis', 
-          '24':'dotted semibrevis',
-          '32':'brevis', 
-          '48':'dotted brevis',
-          '64':'longa', 
-          '96':'dotted longa',
-          '128': 'maxima' }
-value_factor = 2 # TODO: calculate it
 
 #lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 #lilyfile=open("../resources/Pueri_Hebraeorum.ly")
@@ -614,11 +516,11 @@ lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
 texto=quitar_comments(lilyfile.read())
 
 
-#for voz in ['cantus', 'altus', 'tenor', 'bassus']:
-for voz in ['cantus']:
+for voz in ['cantus', 'altus', 'tenor', 'bassus']:
+#for voz in ['cantus']:
     music, lyrics = convert_to_intermediate(voz, texto)
     #print (music)
     #print (lyrics)
     print_in_parallel(music,lyrics)
-    #print ()
+    print ()
 
