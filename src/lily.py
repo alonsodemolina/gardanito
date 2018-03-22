@@ -9,7 +9,6 @@ TODO:
 
     - be aware of musica ficta
     - find voices in the file
-    - calculate value_factor
     - transposition
     - time signature changes
     - more testing
@@ -24,6 +23,8 @@ import re
 notes={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
 
 lily_accidentals={'ses':-2, 'eses':-2, 's':-1, 'es':-1, 'is':1, 'isis':2}
+
+distance=[0, 2, 4, 5, 7, 9, 11] # semitones between each note and do
 
 durations={ '64': 0.25,
             '32': 0.5,
@@ -51,9 +52,6 @@ figure = {'1':'semifusa',
           '96':'dotted longa',
           '128': 'maxima'
 }
-
-value_factor = 2 # TODO: calculate it
-
 
 def quitar_comments(string):
     # eliminamos bloques %{ ... %}
@@ -311,7 +309,20 @@ def analize_incipit(incipit):
         compas=m.group(1)
     else:
         compas="time 4/4"
-    return (label, clef, key, compas)
+    # first note
+    m=re.search("\s(c|d|e|f|g|a|b)"
+                "((s|es|is)*)"
+                "((,|')*)"
+                "(\d+|\\\\breve|\\\\longa|\\\\maxima)"
+                "(\.*)",incipit)
+    diat=notes[m.group(1)]
+    chrom=lily_accidentals[m.group(2)] if m.group(2) else 0
+    octave=count_commas(m.group(4))
+    dur=durations[m.group(6)]
+    puntillos=len(m.group(7))
+    dur=dur*(2-1/2**puntillos)
+    note=[diat, chrom, octave, dur]
+    return (label, clef, key, compas, note)
 
 def process_lyrics(silabas, melismas):
     filtro=[]
@@ -352,10 +363,15 @@ def process_lyrics(silabas, melismas):
 
 
 def hallar_melismas(tokens):
+    # melismas is a list with as many elements as notes.
+    # All its values are 0 except for the positions
+    # corresponding to notes with melismas
+
     # los melismas pueden estar activados por algunos elementos
     # dependiendo de la variable de lilypond melismaBusyProperties
     # la variable autoBeaming tambien influye
     # TODO: leer y analizar esas variables
+    
     ligaturebusy=1
     tiebusy=1
     beambusy=0
@@ -428,7 +444,7 @@ def join_ties(tokens):
     return normalized
 
 
-def intermediate_format(tokens):
+def intermediate_format(tokens, value_factor):
     intermediate=[]
     i=0
     while i<len(tokens):
@@ -482,7 +498,7 @@ def print_in_parallel(music,lyrics):
 def convert_to_intermediate(voz, texto):
     # incipit
     incipit, texto=extraer(texto, "incipit" + voz)
-    (label, clef, key, compas)=analize_incipit(incipit)
+    (label, clef, key, compas, incipit_note)=analize_incipit(incipit)
 
     # musica
     musica, texto = extraer(texto, voz)
@@ -494,13 +510,24 @@ def convert_to_intermediate(voz, texto):
         initial_note=notes[m.group(1)[0]]
         octave=count_commas(m.group(2))
         relative_to_absolute(tokens, initial_note, octave)
-    # melismas is a list with as many elements as notes.
-    # All its values are 0 except for the positions
-    # corresponding to notes with melismas
+    # calculate value_factor, and transposition comparing
+    # the first note with the note in the incipit
+    i=0
+    while not is_a_note(tokens[i]): i=i+1
+    first_pitch=tokens[i][:3]
+    first_duration=tokens[i][4]
+    value_factor=incipit_note[3]/first_duration
+    # transposition = [ diat distance, number of semitones, octave difference]
+    transposition=[ incipit_note[0] - first_pitch[0],
+                    distance[incipit_note[0]] - distance[first_pitch[0]] \
+                            + incipit_note[1] - first_pitch[1],
+                    incipit_note[2] - first_pitch[2] ]
+    # TODO: escribir esto mejor, como resta de vectores
+    # ESCRIBIR transpose(tokens, transposition)
+    print (first_pitch, first_duration, incipit_note, transposition)
     melismas=hallar_melismas(tokens)
     tokens=join_ties(tokens)
-    intermediate=intermediate_format(tokens)
-
+    intermediate=intermediate_format(tokens, value_factor)
     music=[label, clef, str(key), compas] + intermediate
 
     # texto
