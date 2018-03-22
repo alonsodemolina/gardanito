@@ -25,7 +25,8 @@ notes={'c': 0, 'd': 1, 'e': 2, 'f':3, 'g':4, 'a':5, 'b':6}
 
 lily_accidentals={'ses':-2, 'eses':-2, 's':-1, 'es':-1, 'is':1, 'isis':2}
 
-durations={ '32': 0.5,
+durations={ '64': 0.25,
+            '32': 0.5,
             '16': 1,
             '8': 2,
             '4': 4,
@@ -116,7 +117,8 @@ def parse(bloque):
         elif c.isspace():
             i=i+1
             continue
-        # Note
+
+        # Notes
         elif m:
             # a note is the list
             # [diatonic, chromatic, octave, cautionary, duration]
@@ -137,13 +139,13 @@ def parse(bloque):
                 dur=durations[d]
                 puntillos=len(m.group(9))
                 dur=dur*(2-1/2**puntillos)
-                dur=dur*value_factor
                 old_duration=dur
             else:
                 dur=old_duration
-            token=[diat,chrom,octave,caut,int(dur)]
+            token=[diat,chrom,octave,caut,dur]
             length=len(m.group(0))
-        # Rest
+        
+        # Rests
         elif r:
             # A rest is a list ['r', duration]
             # duration is the number of fuses
@@ -167,12 +169,13 @@ def parse(bloque):
                 old_duration=dur
             else:
                 dur=old_duration
-            dur=dur*value_factor*numerator/denominator
-            token=['r', int(dur)]
+            dur=dur*numerator/denominator
+            token=['r', dur]
             for _ in range(repeats):
                 l.append(token)
             i=i+len(r.group(0))
             continue
+
         elif c.isalpha():
             token, length = leerpalabra(bloque, i)
         elif c=='*':
@@ -440,6 +443,7 @@ def intermediate_format(tokens):
             intermediate.append("ligature " + str(notes_in_ligature))
         elif is_a_note(item):
             [diat, chrom, oct, caut, duration]=item
+            duration=int(duration*value_factor)
             if duration>128: # no values greater than a maxima
                 duration=128
             element=figure[str(duration)] + " " + synthesize(diat, chrom, oct)
@@ -447,7 +451,7 @@ def intermediate_format(tokens):
                 element = element + ' explicit'
             intermediate.append(element)
         elif is_a_rest(item):
-            duration=item[1]
+            duration=int(item[1]*value_factor)
             intermediate.append(figure[str(duration)] + " " + 'rest')
         i=i+1
     return intermediate
