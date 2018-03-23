@@ -9,10 +9,10 @@ TODO:
 
     - be aware of musica ficta
     - find voices in the file
-    - transposition
     - time signature changes
     - more testing
     - translate to English
+    - last note always a longa?
 
     - read a book on python and re-write this whole mess
 
@@ -285,6 +285,34 @@ def relative_to_absolute(tokens, initial_note, octave):
     return
 
 
+def transpose(tokens, note1, note2):
+    # the second component will be the number of semitones
+    note1[1] = note1[1] + distance[note1[0]]
+    note2[1] = note2[1] + distance[note2[0]]
+    # transposition = [ diat distance, number of semitones, octave difference]
+    transposition=[0,0,0]
+    for j in [0,1,2]:
+        transposition[j] = note2[j] - note1[j]
+    i=0
+    while i<len(tokens):
+        item=tokens[i]
+        if is_a_note(item):
+            # add distance to get the number of semitones
+            item[1]=item[1] + distance[item[0]]
+            # add each note with the transposition
+            transposed=[0,0,0]
+            for j in [0,1,2]:
+                transposed[j]=item[j]+transposition[j]
+            # normalize the transposed note 
+            item[0]=transposed[0] % 7
+            item[1]=transposed[1] % 12
+            item[2]=transposed[2] + transposed[0] // 7
+            # substract the new distance
+            item[1]=item[1] - distance[item[0]]
+        i=i+1
+    return
+
+
 def analize_incipit(incipit):
     m=re.search('instrumentName\s*=\s*"([^"]*)"', incipit)
     if m:
@@ -499,6 +527,8 @@ def convert_to_intermediate(voz, texto):
     # incipit
     incipit, texto=extraer(texto, "incipit" + voz)
     (label, clef, key, compas, incipit_note)=analize_incipit(incipit)
+    incipit_pitch=incipit_note[:3]
+    incipit_duration=incipit_note[3]
 
     # musica
     musica, texto = extraer(texto, voz)
@@ -510,23 +540,18 @@ def convert_to_intermediate(voz, texto):
         initial_note=notes[m.group(1)[0]]
         octave=count_commas(m.group(2))
         relative_to_absolute(tokens, initial_note, octave)
-    # calculate value_factor, and transposition comparing
+    # calculate the transposition comparing
     # the first note with the note in the incipit
     i=0
-    while not is_a_note(tokens[i]): i=i+1
+    while not is_a_note(tokens[i]):
+        i=i+1
     first_pitch=tokens[i][:3]
     first_duration=tokens[i][4]
-    value_factor=incipit_note[3]/first_duration
-    # transposition = [ diat distance, number of semitones, octave difference]
-    transposition=[ incipit_note[0] - first_pitch[0],
-                    distance[incipit_note[0]] - distance[first_pitch[0]] \
-                            + incipit_note[1] - first_pitch[1],
-                    incipit_note[2] - first_pitch[2] ]
-    # TODO: escribir esto mejor, como resta de vectores
-    # ESCRIBIR transpose(tokens, transposition)
-    print (first_pitch, first_duration, incipit_note, transposition)
+    transpose(tokens, first_pitch, incipit_pitch)
     melismas=hallar_melismas(tokens)
     tokens=join_ties(tokens)
+    # calculate the value_factor comparing with the incipit
+    value_factor=incipit_duration/first_duration
     intermediate=intermediate_format(tokens, value_factor)
     music=[label, clef, str(key), compas] + intermediate
 
