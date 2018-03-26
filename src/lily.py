@@ -7,7 +7,6 @@ Created on March 20, 2018
 
 TODO:
 
-    - be aware of musica ficta
     - find voices in the file
     - time signature changes
     - more testing
@@ -312,6 +311,32 @@ def transpose(tokens, note1, note2):
         i=i+1
     return
 
+def remove_musica_ficta(tokens, key):
+    key_signature=[0]*7 # c major
+    if key < 0:
+        step=-1 # flat
+        note=6 # start in b
+        interval=3 # we move in forths
+    elif key > 0:
+        step=1 # sharp
+        note = 3 # start in f
+        interval=4 # we move in fifths
+    else:
+        step=note=interval=0 # never used
+    i=abs(key)
+    while i>0:
+        key_signature[note] += step
+        note=(note+interval) % 7
+        i=i-1
+    ficta=0
+    for item in tokens:
+        if item == '\\ss':
+            ficta=1
+        if is_a_note(item) and ficta:
+            item[1]=key_signature[item[0]]
+            ficta=0
+    return
+
 
 def analize_incipit(incipit):
     m=re.search('instrumentName\s*=\s*"([^"]*)"', incipit)
@@ -319,12 +344,17 @@ def analize_incipit(incipit):
         label=m.group(1).strip()
     else:
         label="Staff"
+    # this table only 
+    key_table={
+            "c":0, "f":-1, "bes":-2, "ees":-3, "aes":-4, "des":-5, "ges":-6,
+            "ces":-7, "g":1, "d":2, "a":3, "e":4, "b":5, "fis":6, "cis":7
+    }
     m=re.search('\\\\key\s*([a-z]*)', incipit)
     if m:
         key_name=m.group(1)
     else:
         key_name="c"
-    key={"c":'0', "f":'-1', "bes":'-2'}[key_name]
+    key=key_table[key_name]
     m=re.search('petrucci-([^"]*)"', incipit)
     if m:
         clef=m.group(1)
@@ -548,6 +578,7 @@ def convert_to_intermediate(voz, texto):
     first_pitch=tokens[i][:3]
     first_duration=tokens[i][4]
     transpose(tokens, first_pitch, incipit_pitch)
+    remove_musica_ficta(tokens, key)
     melismas=hallar_melismas(tokens)
     tokens=join_ties(tokens)
     # calculate the value_factor comparing with the incipit
@@ -572,7 +603,7 @@ lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
 texto=quitar_comments(lilyfile.read())
 
 
-for voz in ['cantus', 'altus', 'tenor', 'bassus']:
+for voz in ['cantus', 'cantusdos', 'altus', 'tenor', 'tenordos', 'bassus']:
 #for voz in ['cantus']:
     music, lyrics = convert_to_intermediate(voz, texto)
     #print (music)
