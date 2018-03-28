@@ -368,7 +368,7 @@ def analize_incipit(incipit):
     else:
         compas="time 4/4"
     # first note
-    m=re.search("\s(c|d|e|f|g|a|b)"
+    m=re.search("(?:\s|\[)(c|d|e|f|g|a|b)"
                 "((s|es|is)*)"
                 "((,|')*)"
                 "(\d+|\\\\breve|\\\\longa|\\\\maxima)"
@@ -599,12 +599,13 @@ def convert_to_intermediate(voz, texto):
 
 #lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 #lilyfile=open("../resources/Pueri_Hebraeorum.ly")
-lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
+#lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
+lilyfile=open("../resources/Asperges_Me.ly")
 texto=quitar_comments(lilyfile.read())
 
 
-for voz in ['cantus', 'cantusdos', 'altus', 'tenor', 'tenordos', 'bassus']:
-#for voz in ['cantus']:
+for voz in ['cantus', 'altus', 'tenor', 'bassus']:
+#for voz in ['bassus']:
     music, lyrics = convert_to_intermediate(voz, texto)
     #print (music)
     #print (lyrics)
