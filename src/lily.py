@@ -7,7 +7,7 @@ Created on March 20, 2018
 
 TODO:
 
-    - find voices in the file
+    - manage the segments that have no incipit
     - time signature changes
     - more testing
     - translate to English
@@ -66,6 +66,8 @@ def extraer(texto, string):
     # \W matches any non-alphanumeric
     p=re.compile('\W' + string + '\s*=\s*')
     m=p.search(texto)
+    if not m:
+        return '', texto
     string_start=m.start()
     string_end=m.end()
     i=string_end
@@ -553,15 +555,15 @@ def print_in_parallel(music,lyrics):
             print("\t" + item)
 
 
-def convert_to_intermediate(voz, texto):
+def convert_to_intermediate(voz, file_contents):
     # incipit
-    incipit, texto=extraer(texto, "incipit" + voz)
+    incipit, file_contents=extraer(file_contents, "incipit" + voz)
     (label, clef, key, compas, incipit_note)=analize_incipit(incipit)
     incipit_pitch=incipit_note[:3]
     incipit_duration=incipit_note[3]
 
     # musica
-    musica, texto = extraer(texto, voz)
+    musica, file_contents = extraer(file_contents, voz)
     s=musica.find('{')
     tokens=parse(musica[s:])
     # si es un bloque \relative lo convertimos en absoluto
@@ -587,11 +589,11 @@ def convert_to_intermediate(voz, texto):
     music=[label, clef, str(key), compas] + intermediate
 
     # texto
-    lyrics, texto=extraer(texto, "texto" + voz)
+    lyrics, file_contents=extraer(file_contents, "texto" + voz)
     s=lyrics.find('{')
     silabas=lyrics[s+1:-1].split()
     lyrics=process_lyrics(silabas, melismas)
-    return music, lyrics
+    return music, lyrics, file_contents
 
 
 
@@ -601,12 +603,24 @@ def convert_to_intermediate(voz, texto):
 #lilyfile=open("../resources/Pueri_Hebraeorum.ly")
 #lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
 lilyfile=open("../resources/Asperges_Me.ly")
-texto=quitar_comments(lilyfile.read())
+file_contents=quitar_comments(lilyfile.read())
 
+# We find all the segments of the score
+segments=[]
+for match in re.finditer('\\\\score\s*{', file_contents):
+    bloque, size=leerbloque(file_contents, match.end(0)-1)
+    if re.search('ChoirStaff\s*<<', bloque):
+        segments.append(bloque)
 
-for voz in ['cantus', 'altus', 'tenor', 'bassus']:
-#for voz in ['bassus']:
-    music, lyrics = convert_to_intermediate(voz, texto)
+# Now find the voices of each segment
+voices=[]
+for segment in [segments[0], segments[1]]:
+    for name in re.finditer('Voice[^}]*\\\\(\w+)\s*}', segment):
+        voices.append(name.group(1))
+
+for voz in voices:
+#for voz in ['cantus', 'altus', 'tenor', 'bassus']:
+    music, lyrics, file_contents = convert_to_intermediate(voz, file_contents)
     #print (music)
     #print (lyrics)
     print_in_parallel(music,lyrics)
