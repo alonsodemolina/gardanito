@@ -52,38 +52,51 @@ figure = {'1':'semifusa',
           '128': 'maxima'
 }
 
-def quitar_comments(string):
-    # eliminamos bloques %{ ... %}
-    s=re.sub(r'%{.*?%}', r'', string, flags=re.DOTALL)
-    # eliminamos comentarios de una linea % ...
-    t=re.sub(r'%.*?\n', r'\n', s)
-    return t
+class LilySource:
 
-def extraer(texto, string):
-    # Busca en texto una definicion de la forma string={....}
-    # Devuelve el bloque {...}, y el texto con la definicion eliminida
-    bloque=""
-    # \W matches any non-alphanumeric
-    p=re.compile('\W' + string + '\s*=\s*')
-    m=p.search(texto)
-    if not m:
-        return '', texto
-    string_start=m.start()
-    string_end=m.end()
-    i=string_end
-    llaves=0
-    initial_status=1
-    while llaves!=0 or initial_status == 1:
-        c=texto[i]
-        bloque=bloque + c
-        if c == '{':
-            initial_status=0
-            llaves=llaves+1
-        if c == '}':
-            llaves=llaves-1
-        i=i+1
-    resto=texto[:string_start+1] + texto[i:]
-    return bloque, resto
+    def __init__(self, file_contents):
+        self.text=file_contents
+
+    def remove_comments(self):
+        # eliminamos bloques %{ ... %}
+        s=re.sub(r'%{.*?%}', r'', self.text, flags=re.DOTALL)
+        # eliminamos comentarios de una linea % ...
+        self.text=re.sub(r'%.*?\n', r'\n', s)
+
+    def find_segments(self):
+        segments=[]
+        for match in re.finditer('\\\\score\s*{', self.text):
+            bloque, size=leerbloque(self.text, match.end(0)-1)
+            if re.search('ChoirStaff\s*<<', bloque):
+                segments.append(bloque)
+        return segments
+
+    def extract(self, string):
+        # Busca en el texto lilypond una definicion de la forma string={....}
+        # Devuelve el bloque {...}, y elimina del texto la definicion
+        bloque=""
+        # \W matches any non-alphanumeric
+        p=re.compile('\W' + string + '\s*=\s*')
+        m=p.search(self.text)
+        if not m:
+            return ''
+        string_start=m.start()
+        string_end=m.end()
+        i=string_end
+        llaves=0
+        initial_status=1
+        while llaves!=0 or initial_status == 1:
+            c=self.text[i]
+            bloque=bloque + c
+            if c == '{':
+                initial_status=0
+                llaves=llaves+1
+            if c == '}':
+                llaves=llaves-1
+            i=i+1
+        resto=self.text[:string_start+1] + self.text[i:]
+        self.text=resto
+        return bloque
 
 
 def parse(bloque):
@@ -553,48 +566,7 @@ def print_in_parallel(music,lyrics):
             j=j+1
         else:
             print("\t" + item)
-
-
-def convert_to_intermediate(voz, file_contents):
-    # incipit
-    incipit, file_contents=extraer(file_contents, "incipit" + voz)
-    (label, clef, key, compas, incipit_note)=analize_incipit(incipit)
-    incipit_pitch=incipit_note[:3]
-    incipit_duration=incipit_note[3]
-
-    # musica
-    musica, file_contents = extraer(file_contents, voz)
-    s=musica.find('{')
-    tokens=parse(musica[s:])
-    # si es un bloque \relative lo convertimos en absoluto
-    m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
-    if m:
-        initial_note=notes[m.group(1)[0]]
-        octave=count_commas(m.group(2))
-        relative_to_absolute(tokens, initial_note, octave)
-    # calculate the transposition comparing
-    # the first note with the note in the incipit
-    i=0
-    while not is_a_note(tokens[i]):
-        i=i+1
-    first_pitch=tokens[i][:3]
-    first_duration=tokens[i][4]
-    transpose(tokens, first_pitch, incipit_pitch)
-    remove_musica_ficta(tokens, key)
-    melismas=hallar_melismas(tokens)
-    tokens=join_ties(tokens)
-    # calculate the value_factor comparing with the incipit
-    value_factor=incipit_duration/first_duration
-    intermediate=intermediate_format(tokens, value_factor)
-    music=[label, clef, str(key), compas] + intermediate
-
-    # texto
-    lyrics, file_contents=extraer(file_contents, "texto" + voz)
-    s=lyrics.find('{')
-    silabas=lyrics[s+1:-1].split()
-    lyrics=process_lyrics(silabas, melismas)
-    return music, lyrics, file_contents
-
+    print()
 
 
 #################   main   #################
@@ -603,26 +575,55 @@ def convert_to_intermediate(voz, file_contents):
 #lilyfile=open("../resources/Pueri_Hebraeorum.ly")
 #lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
 lilyfile=open("../resources/Asperges_Me.ly")
-file_contents=quitar_comments(lilyfile.read())
 
-# We find all the segments of the score
-segments=[]
-for match in re.finditer('\\\\score\s*{', file_contents):
-    bloque, size=leerbloque(file_contents, match.end(0)-1)
-    if re.search('ChoirStaff\s*<<', bloque):
-        segments.append(bloque)
+lilysource=LilySource(lilyfile.read())
+lilysource.remove_comments()
+segments=lilysource.find_segments()
 
-# Now find the voices of each segment
-voices=[]
-for segment in [segments[0], segments[1]]:
+# Find the voices of each segment
+for segment in segments:
+    lily_global = lilysource.extract("global")
     for name in re.finditer('Voice[^}]*\\\\(\w+)\s*}', segment):
-        voices.append(name.group(1))
+        voz=name.group(1)
 
-for voz in voices:
-#for voz in ['cantus', 'altus', 'tenor', 'bassus']:
-    music, lyrics, file_contents = convert_to_intermediate(voz, file_contents)
-    #print (music)
-    #print (lyrics)
-    print_in_parallel(music,lyrics)
-    print ()
+        # incipit
+        incipit=lilysource.extract("incipit" + voz)
+        (label, clef, key, compas, incipit_note)=analize_incipit(incipit)
+        incipit_pitch=incipit_note[:3]
+        incipit_duration=incipit_note[3]
+
+        # musica
+        musica=lilysource.extract(voz)
+        s=musica.find('{')
+        tokens=parse(musica[s:])
+        # si es un bloque \relative lo convertimos en absoluto
+        m=re.search('\\\\relative\s*([a-z]*)((,|\')*)\s*',musica[:s])
+        if m:
+            initial_note=notes[m.group(1)[0]]
+            octave=count_commas(m.group(2))
+            relative_to_absolute(tokens, initial_note, octave)
+        # calculate the transposition comparing
+        # the first note with the note in the incipit
+        i=0
+        while not is_a_note(tokens[i]):
+            i=i+1
+        first_pitch=tokens[i][:3]
+        first_duration=tokens[i][4]
+        transpose(tokens, first_pitch, incipit_pitch)
+        remove_musica_ficta(tokens, key)
+        melismas=hallar_melismas(tokens)
+        tokens=join_ties(tokens)
+        # calculate the value_factor comparing with the incipit
+        value_factor=incipit_duration/first_duration
+        intermediate=intermediate_format(tokens, value_factor)
+        music=[label, clef, str(key), compas] + intermediate
+
+        # texto
+        lyrics=lilysource.extract("texto" + voz)
+        s=lyrics.find('{')
+        silabas=lyrics[s+1:-1].split()
+        lyrics=process_lyrics(silabas, melismas)
+        #print (music)
+        #print (lyrics)
+        print_in_parallel(music,lyrics)
 
