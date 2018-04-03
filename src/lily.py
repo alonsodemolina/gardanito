@@ -298,8 +298,7 @@ def relative_to_absolute(tokens, initial_note, octave):
         i=i+1
     return
 
-
-def transpose(tokens, note1, note2):
+def find_transposition(note1, note2):
     # the second component will be the number of semitones
     note1[1] = note1[1] + distance[note1[0]]
     note2[1] = note2[1] + distance[note2[0]]
@@ -307,6 +306,10 @@ def transpose(tokens, note1, note2):
     transposition=[0,0,0]
     for j in [0,1,2]:
         transposition[j] = note2[j] - note1[j]
+    return transposition
+
+
+def transpose(tokens, transposition):
     i=0
     while i<len(tokens):
         item=tokens[i]
@@ -551,7 +554,7 @@ def synthesize(diat, chrom, oct):
     octave=str(oct+2) # should be +3 instead of +2 if central do is C4
     return note+acc+octave
 
-def print_in_parallel(music,lyrics):
+def pretty_print(music,lyrics):
     print ('\t' + music[0])
     print ('\t' + music[1])
     print ('\t' + music[2])
@@ -580,6 +583,9 @@ lilysource=LilySource(lilyfile.read())
 lilysource.remove_comments()
 segments=lilysource.find_segments()
 
+voices_dictionary={}
+first_voice=1 # flag: some calculations are done only with the first voice
+
 # Find the voices of each segment
 for segment in segments:
     lily_global = lilysource.extract("global")
@@ -588,9 +594,14 @@ for segment in segments:
 
         # incipit
         incipit=lilysource.extract("incipit" + voz)
-        (label, clef, key, compas, incipit_note)=analize_incipit(incipit)
-        incipit_pitch=incipit_note[:3]
-        incipit_duration=incipit_note[3]
+        if incipit:
+            (label, clef, key, compas, incipit_note)=analize_incipit(incipit)
+            voices_dictionary[voz]=[label, clef, key, compas]
+            incipit_pitch=incipit_note[:3]
+            incipit_duration=incipit_note[3]
+        else:
+            print (voices_dictionary)
+            raise Exception ("There is no incipit")
 
         # musica
         musica=lilysource.extract(voz)
@@ -602,19 +613,23 @@ for segment in segments:
             initial_note=notes[m.group(1)[0]]
             octave=count_commas(m.group(2))
             relative_to_absolute(tokens, initial_note, octave)
-        # calculate the transposition comparing
-        # the first note with the note in the incipit
-        i=0
-        while not is_a_note(tokens[i]):
-            i=i+1
-        first_pitch=tokens[i][:3]
-        first_duration=tokens[i][4]
-        transpose(tokens, first_pitch, incipit_pitch)
+        if first_voice:
+            # find the first note
+            i=0
+            while not is_a_note(tokens[i]):
+                i=i+1
+            first_pitch=tokens[i][:3]
+            first_duration=tokens[i][4]
+            # calculate the transposition comparing
+            # the first note with the note in the incipit
+            transposition=find_transposition(first_pitch, incipit_pitch)
+            # calculate the value_factor comparing with the incipit
+            value_factor=incipit_duration/first_duration
+            first_voice=0
+        transpose(tokens, transposition)
         remove_musica_ficta(tokens, key)
         melismas=hallar_melismas(tokens)
         tokens=join_ties(tokens)
-        # calculate the value_factor comparing with the incipit
-        value_factor=incipit_duration/first_duration
         intermediate=intermediate_format(tokens, value_factor)
         music=[label, clef, str(key), compas] + intermediate
 
@@ -625,5 +640,5 @@ for segment in segments:
         lyrics=process_lyrics(silabas, melismas)
         #print (music)
         #print (lyrics)
-        print_in_parallel(music,lyrics)
+        pretty_print(music,lyrics)
 
