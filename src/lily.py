@@ -7,11 +7,9 @@ Created on March 20, 2018
 
 TODO:
 
-    - manage the segments that have no incipit
     - time signature changes
     - more testing
     - translate to English
-    - last note always a longa?
 
     - read a book on python and re-write this whole mess
 
@@ -37,19 +35,19 @@ durations={ '64': 0.25,
             '\\maxima': 128
 }
 
-figure = {'1':'semifusa', 
-          '2':'fusa', 
-          '4':'semiminima', 
-          '6':'dotted semiminima', 
-          '8':'minima', 
-          '12':'dotted minima', 
-          '16':'semibrevis', 
-          '24':'dotted semibrevis',
-          '32':'brevis', 
-          '48':'dotted brevis',
-          '64':'longa', 
-          '96':'dotted longa',
-          '128': 'maxima'
+figure = {1:'semifusa', 
+          2:'fusa', 
+          4:'semiminima', 
+          6:'dotted semiminima', 
+          8:'minima', 
+          12:'dotted minima', 
+          16:'semibrevis', 
+          24:'dotted semibrevis',
+          32:'brevis', 
+          48:'dotted brevis',
+          64:'longa', 
+          96:'dotted longa',
+          128:'maxima'
 }
 
 class LilySource:
@@ -210,7 +208,7 @@ def leerpalabra(string, pos):
     j=pos
     letra=string[j]
     while letra.isalpha() or letra=='.':
-        palabra=palabra + letra
+        palabra = palabra + letra
         j=j+1
         letra=string[j]
     return palabra, j-pos
@@ -222,7 +220,7 @@ def leerproporcion(string, pos):
     c=string[j]
     while c.isdigit() or c.isspace() or c=='/' or c=='*':
         if not c.isspace():
-            proporcion=proporcion + c
+            proporcion = proporcion + c
         j=j+1
         c=string[j]
     return proporcion, j-pos
@@ -232,8 +230,8 @@ def leerscheme(string, pos):
     scheme=""
     j=pos
     c=string[j]
-    while c=='#' or c.isalpha() or c.isdigit():
-        scheme=scheme + c
+    while not c.isspace():
+        scheme = scheme + c
         j=j+1
         c=string[j]
     return scheme, j-pos
@@ -536,15 +534,17 @@ def intermediate_format(tokens, value_factor):
         elif is_a_note(item):
             [diat, chrom, oct, caut, duration]=item
             duration=int(duration*value_factor)
-            if duration>128: # no values greater than a maxima
-                duration=128
-            element=figure[str(duration)] + " " + synthesize(diat, chrom, oct)
+            if duration not in figure.keys():
+                # probably it is the last note,
+                # change it for a longa
+                duration=64
+            element=figure[duration] + " " + synthesize(diat, chrom, oct)
             if caut == '!':
                 element = element + ' explicit'
             intermediate.append(element)
         elif is_a_rest(item):
             duration=int(item[1]*value_factor)
-            intermediate.append(figure[str(duration)] + " " + 'rest')
+            intermediate.append(figure[duration] + " " + 'rest')
         i=i+1
     return intermediate
 
@@ -577,7 +577,8 @@ def pretty_print(music,lyrics):
 #lilyfile=open("../resources/O_Quam_Gloriosum_Est_Regnum.ly")
 #lilyfile=open("../resources/Pueri_Hebraeorum.ly")
 #lilyfile=open("../resources/Ardens_Est_Cor_Meum.ly")
-lilyfile=open("../resources/Asperges_Me.ly")
+#lilyfile=open("../resources/Asperges_Me.ly")
+lilyfile=open("../resources/Ave_Maris_Stella-6-Agnus_Dei.ly")
 
 lilysource=LilySource(lilyfile.read())
 lilysource.remove_comments()
@@ -600,8 +601,16 @@ for segment in segments:
             incipit_pitch=incipit_note[:3]
             incipit_duration=incipit_note[3]
         else:
-            print (voices_dictionary)
-            raise Exception ("There is no incipit")
+            # if the voice has not incipit we use 
+            # the incipit of a voice with the same name
+            # or a shorter name
+            i=len(voz)
+            while voz[0:i] not in voices_dictionary.keys():
+                i=i-1
+            voz_substitute=voz[0:i]
+            (label, clef, key, compas)=voices_dictionary[voz_substitute]
+            if voz!=voz_substitute:
+                label=label + '-' + voz[i:]
 
         # musica
         musica=lilysource.extract(voz)
@@ -613,6 +622,9 @@ for segment in segments:
             initial_note=notes[m.group(1)[0]]
             octave=count_commas(m.group(2))
             relative_to_absolute(tokens, initial_note, octave)
+        remove_musica_ficta(tokens, key)
+        melismas=hallar_melismas(tokens)
+        tokens=join_ties(tokens)
         if first_voice:
             # find the first note
             i=0
@@ -627,9 +639,6 @@ for segment in segments:
             value_factor=incipit_duration/first_duration
             first_voice=0
         transpose(tokens, transposition)
-        remove_musica_ficta(tokens, key)
-        melismas=hallar_melismas(tokens)
-        tokens=join_ties(tokens)
         intermediate=intermediate_format(tokens, value_factor)
         music=[label, clef, str(key), compas] + intermediate
 
